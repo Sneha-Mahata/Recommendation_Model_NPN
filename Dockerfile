@@ -1,35 +1,50 @@
-# Dockerfile (use this)
+# Dockerfile - build-friendly for scikit-surprise
 FROM python:3.10-slim
 
-# Avoid interactive prompts during apt installs
 ENV DEBIAN_FRONTEND=noninteractive
-
-# Install system build deps needed by scipy / scikit-surprise etc.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential \
-      git \
-      curl \
-      ca-certificates \
-      pkg-config \
-      python3-dev \
-      gfortran \
-      libopenblas-dev \
-      liblapack-dev \
-      libblas-dev \
-      && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# Copy requirements first to leverage layer caching
-COPY requirements.txt .
+# System build deps (compilers, headers, BLAS/LAPACK)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    gfortran \
+    git \
+    curl \
+    python3-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    libblas-dev \
+    pkg-config \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip & install helpful build tools
-RUN pip install --upgrade pip setuptools wheel cython
+# Copy requirements but we'll install some packages in stages
+COPY requirements.txt /app/requirements.txt
 
-# Install python libs
-RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip & core wheel/build tools
+RUN pip install --upgrade pip setuptools wheel
 
-# Copy application source
+# Install numerical libs + cython early (needed to build C extensions)
+# Pin numpy and scipy to versions that are compatible with your code and wheels
+RUN pip install --no-cache-dir numpy==1.26.4 scipy==1.11.3 cython==0.29.36
+
+# Install scikit-surprise separately so it sees numpy/cython headers
+RUN pip install --no-cache-dir scikit-surprise==1.1.3
+
+# Install the remaining requirements excluding the ones we already installed.
+# Create a temporary filtered requirements file that excludes numpy, scipy, cython, scikit-surprise
+RUN python - <<'PY'\n\
+from pathlib import Path\n\
+r = Path('requirements.txt').read_text().splitlines()\n\
+filtered = [l for l in r if l.strip() and not any(x in l for x in ('numpy','scipy','cython','scikit-surprise','surprise'))]\n\
+Path('/app/req_filtered.txt').write_text('\\n'.join(filtered))\n\
+PY
+
+RUN pip install --no-cache-dir -r /app/req_filtered.txt
+
+# Copy app sources
 COPY . /app
 
 EXPOSE 8000

@@ -90,7 +90,7 @@ def get_top_n_collab(user_id: int, n: int = 10) -> pd.DataFrame:
     df = df.merge(hotel_mapping, on='hotel_id', how='left')
     return df
 
-# ensemble merging (same logic as your notebook)
+# ensemble merging 
 def ensemble_recommend(user_preferences: Dict, user_id: Optional[int]=None, top_n: int = 5,
                        weight_cf: float = 0.6, weight_cb: float = 0.4) -> List[Dict]:
     # restrict by city if provided
@@ -168,7 +168,7 @@ def ensemble_recommend(user_preferences: Dict, user_id: Optional[int]=None, top_
 # LLM explanation generator (with simple retry/backoff). If GEMINI_API_KEY not set or LLM unavailable,
 # it will populate llm_explanation="" and llm_error with a message.
 def generate_explanations(recs: List[Dict], user_prefs: Dict, model_name: str = "gemini-1.5-flash",
-                          max_tokens: int = 120, max_retries: int = 2, pause_between: float = 1.0) -> List[Dict]:
+                          max_tokens: int = 120, max_retries: int = 2, pause_between: float = 12.0) -> List[Dict]:
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if not gemini_key or not LLM_AVAILABLE:
         # LLM not available — annotate with error and return original recs
@@ -203,10 +203,16 @@ def generate_explanations(recs: List[Dict], user_prefs: Dict, model_name: str = 
                 star = r.get('star_rating')
                 amenities = ""  # optionally you could extract amenity list from processed_data
 
+                # Handle star rating display
+                if star == -1:
+                    star_display = "star rating unknown"
+                else:
+                    star_display = f"{star}★"
+
                 prompt = (
-                    f"Explain in 2 short sentences why {name} (in {city}, ₹{price}/night, {star}★) "
+                    f"Explain in 2 short sentences why {name} (in {city}, ₹{price}/night, {star_display}) "
                     f"is a good match for user prefs: {json.dumps(user_prefs)}. "
-                    "Mention a tradeoff if any."
+                    "Mention a tradeoff if any. Note: If star rating is -1, it means the star rating is not known. Only star ratings 3, 4, 5 are significant."
                 )
                 human_msg = HumanMessage(content=prompt)
                 resp = llm.invoke([human_msg])

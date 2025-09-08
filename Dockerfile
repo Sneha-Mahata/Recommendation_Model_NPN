@@ -35,12 +35,11 @@ RUN pip install --no-cache-dir scikit-surprise==1.1.3
 
 # Install the remaining requirements excluding the ones we already installed.
 # Create a temporary filtered requirements file that excludes numpy, scipy, cython, scikit-surprise
-RUN python - <<'PY'\n\
-from pathlib import Path\n\
-r = Path('requirements.txt').read_text().splitlines()\n\
-filtered = [l for l in r if l.strip() and not any(x in l for x in ('numpy','scipy','cython','scikit-surprise','surprise'))]\n\
-Path('/app/req_filtered.txt').write_text('\\n'.join(filtered))\n\
-PY
+RUN python3 -c "\
+import pathlib; \
+r = pathlib.Path('requirements.txt').read_text().splitlines(); \
+filtered = [l for l in r if l.strip() and not any(x in l.lower() for x in ['numpy','scipy','cython','scikit-surprise','surprise'])]; \
+pathlib.Path('/app/req_filtered.txt').write_text('\n'.join(filtered))"
 
 RUN pip install --no-cache-dir -r /app/req_filtered.txt
 

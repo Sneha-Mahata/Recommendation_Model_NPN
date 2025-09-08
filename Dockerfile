@@ -38,7 +38,7 @@ RUN pip install --no-cache-dir scikit-surprise==1.1.3
 RUN python3 -c "\
 import pathlib; \
 r = pathlib.Path('requirements.txt').read_text().splitlines(); \
-filtered = [l for l in r if l.strip() and not any(x in l.lower() for x in ['numpy','scipy','cython','scikit-surprise','surprise'])]; \
+filtered = [l for l in r if l.strip() and not l.strip().startswith('#') and not any(x in l.lower() for x in ['numpy','scipy','cython','scikit-surprise','surprise'])]; \
 pathlib.Path('/app/req_filtered.txt').write_text('\n'.join(filtered))"
 
 RUN pip install --no-cache-dir -r /app/req_filtered.txt

@@ -8,7 +8,8 @@ joblib==1.5.1
 scikit-surprise==1.1.3
 gunicorn==21.2.0
 
-# optional: remove during debugging to speed build
-# langchain==0.3.27
-# langchain-google-genai==0.0.6
-# google-cloud-aiplatform==2.19.0
+# LLM and Google API dependencies
+langchain==0.3.27
+langchain-google-genai==0.0.6
+google-cloud-aiplatform==2.19.0
+google-api-core
